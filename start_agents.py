@@ -2,31 +2,43 @@ import asyncio
 from agents.TaskManagementAgent import TaskManagerAgent
 from agents.robot3 import MedicationRobotAgent
 
-async def main():
-    # Define robot JIDs and passwords
-    robot1_jid = "robot1@localhost"
-    robot1_pass = "robotpass"
 
-    robot2_jid = "robot2@localhost"
-    robot2_pass = "robotpass"
 
-    manager_jid = "manager@localhost"
-    manager_pass = "managerpass"
-
-    # Create agents
-    robot1 = MedicationRobotAgent(robot1_jid, robot1_pass, peer_robots=[robot2_jid])
-    robot2 = MedicationRobotAgent(robot2_jid, robot2_pass, peer_robots=[robot1_jid])
-    manager = TaskManagerAgent(manager_jid, manager_pass, robot_ids=[robot1_jid, robot2_jid])
-
-    # Start agents with await
-    await robot1.start(auto_register=True)
-    await robot2.start(auto_register=True)
-    await manager.start(auto_register=True)
-
-    print("[System] Agents started. Press Ctrl+C to exit.")
-
-    while True:
-        await asyncio.sleep(1)
+# === Async Main Entry Point ===
 
 if __name__ == "__main__":
+
+    async def main():
+
+        all_ids = ["robot1@localhost", "robot2@localhost", "robot3@localhost"]
+
+        def get_peers(my_id):
+            return [jid for jid in all_ids if jid != my_id]
+        
+        task_manager = TaskManagerAgent("taskmanager@localhost", "managerpassword", all_ids)
+
+        robot1 = MedicationRobotAgent("robot1@localhost", "robotpassword", get_peers("robot1@localhost"))
+        robot2 = MedicationRobotAgent("robot2@localhost", "robotpassword", get_peers("robot2@localhost"))
+        robot3 = MedicationRobotAgent("robot3@localhost", "robotpassword", get_peers("robot3@localhost"))
+
+        await asyncio.gather(
+            task_manager.start(),
+            robot1.start(),
+            robot2.start(),
+            robot3.start()
+        )
+
+        print("Robots started. Press Ctrl+C to stop.")
+
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            print("Stopping agents...")
+            await task_manager.stop()
+            await robot1.stop()
+            await robot2.stop()
+            await robot3.stop()
+            print("Robots stopped.")
+
     asyncio.run(main())

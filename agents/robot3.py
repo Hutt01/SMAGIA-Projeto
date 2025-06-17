@@ -11,6 +11,10 @@ class MedicationRobotAgent(Agent):
         super().__init__(jid, password)
         self.stock = ROBOT_MAX_MEDICATION.copy()
         self.peer_robots = peer_robots
+        
+    async def setup(self):
+        print(f"[{self.name}] MedicationRobotAgent setup.")
+        self.add_behaviour(self.MessageReceiverBehaviour())
 
     class MessageReceiverBehaviour(CyclicBehaviour):
         async def on_start(self):
