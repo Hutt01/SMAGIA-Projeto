@@ -9,3 +9,7 @@ class TaskStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+class RobotStatus(Enum):
+    AVAILABLE = "available"
+    IN_PROGRESS = "in_progress"
+    CHARGING = "charging"

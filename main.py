@@ -1,7 +1,4 @@
 from flask import Flask, request
-from agents.robot3 import MedicationRobotAgent
-from agents.TaskManagementAgent import TaskManagerAgent
-from common.config import APP_API_URL, ROBOT_MAX_MEDICATION
 
 app = Flask(__name__)
 
@@ -25,6 +22,13 @@ def delete_task(task_id):
         return {"message": f"Task '{task_id}' deleted successfully."}, 200
     else:
         return {"error": f"Task '{task_id}' not found."}, 404
+    
+@app.route('/pending_tasks/', methods=['DELETE'])
+def delete_all_tasks():
+    global pending_tasks
+    pending_tasks.clear()  # Empties the list in-place
+    return {"message": "All pending tasks deleted successfully."}, 200
+
 
 @app.route('/pending_tasks', methods=['POST'])
 def add_task():

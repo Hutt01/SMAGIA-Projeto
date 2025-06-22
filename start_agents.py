@@ -10,7 +10,8 @@ if __name__ == "__main__":
 
     async def main():
 
-        all_ids = ["robot1@localhost", "robot2@localhost", "robot3@localhost"]
+        all_ids = ["robot1@localhost", "robot2@localhost"]
+        # all_ids = ["robot1@localhost", "robot2@localhost", "robot3@localhost","robot4@localhost"]
 
         def get_peers(my_id):
             return [jid for jid in all_ids if jid != my_id]
@@ -19,13 +20,15 @@ if __name__ == "__main__":
 
         robot1 = MedicationRobotAgent("robot1@localhost", "robotpassword", get_peers("robot1@localhost"))
         robot2 = MedicationRobotAgent("robot2@localhost", "robotpassword", get_peers("robot2@localhost"))
-        robot3 = MedicationRobotAgent("robot3@localhost", "robotpassword", get_peers("robot3@localhost"))
+        # robot3 = MedicationRobotAgent("robot3@localhost", "robotpassword", get_peers("robot3@localhost"))
+        # robot4 = MedicationRobotAgent("robot4@localhost", "robotpassword", get_peers("robot4@localhost"))
 
         await asyncio.gather(
             task_manager.start(),
             robot1.start(),
             robot2.start(),
-            robot3.start()
+            # robot3.start(),
+            # robot4.start()
         )
 
         print("Robots started. Press Ctrl+C to stop.")
@@ -38,7 +41,8 @@ if __name__ == "__main__":
             await task_manager.stop()
             await robot1.stop()
             await robot2.stop()
-            await robot3.stop()
+            # await robot3.stop()
+            # await robot4.stop()
             print("Robots stopped.")
 
     asyncio.run(main())

@@ -12,6 +12,8 @@ class TaskManagerAgent(Agent):
         super().__init__(jid, password)
         self.robot_ids = robot_ids
         self.current_robot = 0
+        self.robot_available_ids = []
+        self.tasks = []
 
     async def setup(self):
             print(f"[{self.name}] TaskManagerAgent setup.")
@@ -23,12 +25,27 @@ class TaskManagerAgent(Agent):
 
         async def run(self):
             try:
+                await asyncio.sleep(5)
                 response = requests.get(f"{APP_API_URL}/pending_tasks")
                 if response.status_code == 200:
-                    tasks = response.json().get("pending_tasks", [])
-                    for task in tasks:
-                        await self.dispatch_task(task)
-                        requests.delete(f"{APP_API_URL}/pending_tasks/{task['ID']}")
+                    received_tasks = response.json().get("pending_tasks", [])
+                    if received_tasks == []:
+                        print(f"[{self.agent.name}] No pending tasks found.")
+                        return
+                    existing_ids = {task["ID"] for task in self.agent.tasks}
+
+                    for task in received_tasks:
+                        if task["ID"] not in existing_ids:
+                            self.agent.tasks.append(task)
+
+                        requests.delete(f"{APP_API_URL}/pending_tasks")
+                        for task in self.agent.tasks:
+                            #await self.ask_for_availability(task)
+                            #await self.dispatch_task(task)
+                            robots = await self.get_available_robots_for_task(task)
+                            print(robots)
+                            self.agent.tasks.remove(task)
+
                 else:
                     print(f"[{self.agent.name}] Failed to fetch tasks: {response.status_code}")
             except Exception as e:
@@ -51,6 +68,67 @@ class TaskManagerAgent(Agent):
 
             await self.send(msg)
             print(f"[{self.agent.name}] Dispatched task {task['ID']} to {robot_jid}")
+        
+        async def ask_for_availability(self, task):
+            
+            for robot_jid in self.agent.robot_ids:
+                msg = Message(to=robot_jid)
+                msg.set_metadata("performative", "inform")
+                msg.set_metadata("task_type", "availability")
+                msg.body = json.dumps(task)
+                await self.send(msg)
+                print(f"[{self.agent.name}] Asked {robot_jid} for availability for task {task['ID']}")
+
+
+            receivemsg = await self.receive(timeout=10)
+            if receivemsg:
+                if receivemsg.get_metadata("performative") == "inform" and receivemsg.get_metadata("task_type") == "availability_response":
+                    print(f"[{self.agent.name}] Received availability response from {receivemsg.sender}")
+                    # Here you can handle the availability response if needed
+                    #self.agent.robot_available_ids.append(receivemsg.sender["ID"])
+                    print(f"[{self.agent.name}] Expected message: {receivemsg.body}")
+                else:
+                    print(f"[{self.agent.name}] Received unexpected message: {receivemsg.body}")
+
+        async def get_available_robots_for_task(self, task):
+            available_robots = []
+
+            for robot_jid in self.agent.robot_ids:
+                msg = Message(to=robot_jid)
+                msg.set_metadata("performative", "inform")
+                msg.set_metadata("task_type", "availability")
+                msg.body = json.dumps(task)
+                await self.send(msg)
+                print(f"[{self.agent.name}] Asked {robot_jid} for availability for task {task['ID']}")
+
+            # Collect responses for up to 10 seconds
+            end_time = asyncio.get_event_loop().time() + 10
+            while asyncio.get_event_loop().time() < end_time:
+                msg = await self.receive(timeout=1)
+                if msg:
+                    if (msg.get_metadata("performative") == "inform" and
+                        msg.get_metadata("task_type") == "availability_response"):
+                        
+                        try:
+                            robot_info = json.loads(msg.body)
+                            if self.can_fulfill(task["medications"], robot_info["stock"]):
+                                available_robots.append(str(msg.sender))
+                                print(f"[{self.agent.name}] {msg.sender} CAN fulfill task {task['ID']}")
+                            else:
+                                print(f"[{self.agent.name}] {msg.sender} CANNOT fulfill task {task['ID']}")
+                        except Exception as e:
+                            print(f"[{self.agent.name}] Failed to parse robot response: {e}")
+                await asyncio.sleep(0.1)
+
+            return available_robots
+        
+        def can_fulfill(self, required, available):
+            for med_type, qty in required.items():
+                if available.get(med_type, 0) < qty:
+                    return False
+            return True
+
+            
 
         
 
