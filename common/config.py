@@ -11,5 +11,5 @@ class TaskStatus(Enum):
 
 class RobotStatus(Enum):
     AVAILABLE = "available"
-    IN_PROGRESS = "in_progress"
+    DELIVERING = "delivering"
     CHARGING = "charging"
