@@ -3,11 +3,41 @@ from flask import Flask, request
 app = Flask(__name__)
 
 pending_tasks = [
-    {"medications": {"Type1": 1, "Type2": 1, "Type3": 1, "Type4": 1}, "location": "Room A-101", "ID": "task_001"},
-    {"medications": {"Type1": 5, "Type2": 3}, "location": "Room B-202", "ID": "task_002"},
-    {"medications": {"Type3": 1, "Type4": 1}, "location": "Room C-303", "ID": "task_003"},
-    {"medications": {"Type1": 1, "Type2": 1}, "location": "Room D-404", "ID": "task_004"}
+    {"medications": {"Type1": 1, "Type2": 1, "Type3": 1, "Type4": 1}, "room": "Room A-101", "ID": "task_001"},
+    {"medications": {"Type1": 5, "Type2": 3}, "room": "Room B-202", "ID": "task_002"},
+    {"medications": {"Type3": 1, "Type4": 1}, "room": "Room C-303", "ID": "task_003"},
 ]
+
+# pending_tasks = [
+#     {
+#         "medications": {"Type1": 1, "Type2": 1, "Type3": 1, "Type4": 1},
+#         "location": {
+#             "Robot1": {"x": -9.0, "y": 0.5},
+#             "Robot2": {"x": -9.0, "y": -2.0},
+#             "Robot3": {"x": -9.0, "y": -4.0}
+#         },
+#         "ID": "task_001"
+#     },
+#     {
+#         "medications": {"Type1": 5, "Type2": 3},
+#         "location": {
+#             "Robot1": {"x": 9.0, "y": -5.0},
+#             "Robot2": {"x": 9.0, "y": -3.0},
+#             "Robot3": {"x": 9.0, "y": -8.0}
+#         },
+#         "ID": "task_002"
+#     },
+#     {
+#         "medications": {"Type3": 1, "Type4": 1},
+#         "location": {
+#             "Robot1": {"x": -9.0, "y": -16.0},
+#             "Robot2": {"x": -9.0, "y": -18.0},
+#             "Robot3": {"x": -9.0, "y": -20.0}
+#         },
+#         "ID": "task_003"
+#     }
+# ]
+
 
 @app.route('/pending_tasks', methods=['GET'])
 def get_pending_tasks():

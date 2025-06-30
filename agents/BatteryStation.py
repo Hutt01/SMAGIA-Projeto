@@ -19,7 +19,7 @@ class BatteryStationAgent(Agent):
     class BatteryBehaviour(CyclicBehaviour):
         async def run(self):
             # Simulate battery check
-            print(f"[{self.agent.name}] Battery level: {self.battery_level}%")
+           # print(f"[{self.agent.name}] Battery level: {self.battery_level}%")
             if self.battery_level < 20 and self.robot_status != RobotStatus.AVAILABLE:
                 print(f"[{self.agent.name}] Battery low. Returning to charging station.")
                 self.robot_status = RobotStatus.CHARGING
