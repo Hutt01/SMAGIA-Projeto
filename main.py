@@ -2,10 +2,17 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
+# pending_tasks = [
+#     {"medications": {"Type1": 5, "Type2": 3}, "room": "Room B-202", "ID": "task_002"},
+#     {"medications": {"Type1": 1, "Type2": 1, "Type3": 1, "Type4": 1}, "room": "Room A-101", "ID": "task_001"},
+#     {"medications": {"Type3": 1, "Type4": 1}, "room": "Room C-303", "ID": "task_003"},
+#     {"medications": {"Type3": 30, "Type4": 5}, "room": "Room C-303", "ID": "task_004"},
+#     {"medications": {"Type3": 1, "Type4": 1}, "room": "Room C-303", "ID": "task_005"},
+
+# ]
+
 pending_tasks = [
-    {"medications": {"Type1": 1, "Type2": 1, "Type3": 1, "Type4": 1}, "room": "Room A-101", "ID": "task_001"},
-    {"medications": {"Type1": 5, "Type2": 3}, "room": "Room B-202", "ID": "task_002"},
-    {"medications": {"Type3": 1, "Type4": 1}, "room": "Room C-303", "ID": "task_003"},
+    {"medications": {"Type1": 5, "Type2": 3}, "room": "Room C-303", "ID": "task_001"}
 ]
 
 # pending_tasks = [
@@ -63,8 +70,8 @@ def delete_all_tasks():
 @app.route('/pending_tasks', methods=['POST'])
 def add_task():
     new_task = request.get_json()
-    if not new_task or 'ID' not in new_task or 'medications' not in new_task or 'location' not in new_task:
-        return {"error": "Invalid task format. Required: ID, medications, location."}, 400
+    if not new_task or 'ID' not in new_task or 'medications' not in new_task or 'room' not in new_task:
+        return {"error": "Invalid task format. Required: ID, medications, room."}, 400
     if any(task['ID'] == new_task['ID'] for task in pending_tasks):
         return {"error": f"Task with ID '{new_task['ID']}' already exists."}, 400
     pending_tasks.append(new_task)

@@ -42,7 +42,9 @@ def get_location(robot_name, timeout=5):
     client.disconnect()
 
     if got_message:
-        return location_data["x"], location_data["y"]
+        location= location_data["x"], location_data["y"]
+        print(f"[[LOCATION]] {robot_name} IS {location}.")
+        return location
     else:
         print(f"No location message received for {robot_name} within {timeout} seconds.")
         return None

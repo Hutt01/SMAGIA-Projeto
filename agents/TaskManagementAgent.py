@@ -13,6 +13,7 @@ class TaskManagerAgent(Agent):
     def __init__(self, jid, password, robot_ids):
         super().__init__(jid, password)
         self.robot_ids = robot_ids
+        self.reserved_robots = set()
         self.pending = [] 
 
     async def setup(self):
@@ -53,14 +54,15 @@ class TaskManagerAgent(Agent):
         async def dispatch_task(self, task):
             respostas = []
 
-
+            # Pedir disponibilidade a todos os robôs
             for robot_jid in self.agent.robot_ids:
                 msg = Message(to=robot_jid)
                 msg.set_metadata("performative", "inform")
-                msg.set_metadata("task_type", "availability")
+                msg.set_metadata("task_type", "availability_check")
+                msg.body = task.get("room", "")  # envia a sala de entrega como contexto
                 await self.send(msg)
 
-
+            # Esperar pelas respostas
             for _ in self.agent.robot_ids:
                 response = await self.receive(timeout=3)
                 if response and response.get_metadata("task_type") == "availability_response":
@@ -71,19 +73,39 @@ class TaskManagerAgent(Agent):
                     except Exception as e:
                         print(f"[{self.agent.name}] Erro ao processar disponibilidade: {e}")
 
-            candidatos = [r for r in respostas if r.get("status") == "available"]
-            if not candidatos:
-                print(f"[{self.agent.name}] Nenhum robô disponível para a tarefa {task['ID']}. A reenfileirar.")
+            # Filtrar robôs que já estão reservados
+            respostas_disponiveis = [r for r in respostas if r.get("status") == "available" and r["jid"] not in self.agent.reserved_robots]
+
+            if not respostas_disponiveis:
+                print(f"[{self.agent.name}] Nenhum robô disponível para a tarefa {task['ID']} (reservados ou ocupados). A reenfileirar.")
                 self.agent.pending.append(task)
                 return
 
-            melhor = max(candidatos, key=lambda r: r.get("battery", 0))
+            # Selecionar o com mais bateria (ou podes mudar critério)
+            melhor = max(respostas_disponiveis, key=lambda r: r.get("battery", 0))
             robot_jid = melhor["jid"]
 
+            # Confirmar estado antes de enviar tarefa
+            confirm_msg = Message(to=robot_jid)
+            confirm_msg.set_metadata("performative", "inform")
+            confirm_msg.set_metadata("task_type", "availability_check")
+            confirm_msg.body = task.get("room", "")
+            await self.send(confirm_msg)
 
-            msg = Message(to=robot_jid)
-            msg.set_metadata("performative", "inform")
-            msg.set_metadata("task_type", "delivery")
-            msg.body = json.dumps(task)
-            await self.send(msg)
-            print(f"[{self.agent.name}] Atribuiu a tarefa {task['ID']} ao robô {robot_jid}")
+            confirm_response = await self.receive(timeout=2)
+            if confirm_response and confirm_response.get_metadata("task_type") == "availability_response":
+                confirm_data = json.loads(confirm_response.body)
+                if confirm_data.get("status") == "available":
+                    msg = Message(to=robot_jid)
+                    msg.set_metadata("performative", "inform")
+                    msg.set_metadata("task_type", "delivery")
+                    msg.body = json.dumps(task)
+                    await self.send(msg)
+                    print(f"[{self.agent.name}] Atribuiu a tarefa {task['ID']} ao robô {robot_jid}")
+                    return
+
+            # Se já não estiver disponível, reenfileirar
+            print(f"[{self.agent.name}] Robot {robot_jid} became unavailable. Added {task['ID']} to the task pile again")
+            self.agent.pending.append(task)
+
+
