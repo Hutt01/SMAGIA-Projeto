@@ -9,6 +9,8 @@ import paho.mqtt.client as mqtt
 import threading
 from services.locationService import get_location, distance_between_points
 
+CHARGING_STATION_LOCATION = {"x": 1.43, "y": -11.21}
+
 # ---- ROOM COORDS PER ROBOT ----
 ROBOT_LOCATIONS = {
     "robot1": {
@@ -49,12 +51,12 @@ ROBOT_LOCATIONS = {
 
 
 class MedicationRobotAgent(Agent):
-    def __init__(self, jid, password, peer_robots: List[str], robot_name: str):
+    def __init__(self, jid, password, peer_robots: List[str], robot_name: str, battery_level: int):
         super().__init__(jid, password)
         self.robot_name = robot_name
         self.stock = ROBOT_MAX_MEDICATION.copy()
         self.peer_robots = peer_robots
-        self.battery_level = 100
+        self.battery_level = battery_level
         self.robot_status = RobotStatus.AVAILABLE
         self.room_locations = ROBOT_LOCATIONS[robot_name]
         self.location = None  # Updated per task
@@ -153,24 +155,23 @@ class MedicationRobotAgent(Agent):
                                     })
                                     await self.send(notice)
                                     return
+                            if await self.can_fulfill(task["medications"]):
+                                self.agent.robot_status = RobotStatus.DELIVERING
+                                await self.deliver_medication(task, room)
+                                print(f"[{self.agent.name}] Executou sozinho a tarefa {task['ID']}")
 
                             success = await self.ask_peers_for_help(task, room)
                             if success:
                                 print(f"[{self.agent.name}] Dividiu a tarefa {task['ID']} com peers.")
                                 return
 
-                            if self.can_fulfill(task["medications"]):
-                                self.agent.robot_status = RobotStatus.DELIVERING
-                                await self.deliver_medication(task, room)
-                                print(f"[{self.agent.name}] Executou sozinho a tarefa {task['ID']}")
-                            else:
-                                print(f"[{self.agent.name}] Impossível cumprir a tarefa {task['ID']}, nem com ajuda. A devolver.")
-                                fail_msg = Message(to="taskmanager@localhost")
-                                fail_msg.set_metadata("performative", "inform")
-                                fail_msg.set_metadata("task_type", "delivery_failed")
-                                fail_msg.body = json.dumps(task)
-                                await self.send(fail_msg)
-                                print(f"[{self.agent.name}] Enviou devolução da tarefa {task['ID']} ao gestor.")
+                            print(f"[{self.agent.name}] Impossível cumprir a tarefa {task['ID']}, nem com ajuda. A devolver.")
+                            fail_msg = Message(to="taskmanager@localhost")
+                            fail_msg.set_metadata("performative", "inform")
+                            fail_msg.set_metadata("task_type", "delivery_failed")
+                            fail_msg.body = json.dumps(task)
+                            await self.send(fail_msg)
+                            print(f"[{self.agent.name}] Enviou devolução da tarefa {task['ID']} ao gestor.")
 
                         except Exception as e:
                             print(f"[{self.agent.name}] Error handling task message: {e}")
@@ -187,7 +188,11 @@ class MedicationRobotAgent(Agent):
                 print(f"[{self.agent.name}] [FATAL ERROR no run()] {e}")
 
 
-        def can_fulfill(self, meds_required):
+        async def can_fulfill(self, meds_required):
+            if self.agent.battery_level < 20:
+                print(f"[{self.agent.name}] Bateria baixa, não pode cumprir a tarefa.")
+                await self.go_to_charging_station()
+                return False
             return all(self.agent.stock.get(med, 0) >= amount for med, amount in meds_required.items())
 
         def can_peer_fulfill(self, stock, meds_required):
@@ -348,7 +353,7 @@ class MedicationRobotAgent(Agent):
             self.agent.robot_status = RobotStatus.DELIVERING
             print(f"[{self.agent.name}] Reservou tarefa {task['ID']} via peer. Estado → DELIVERING")
 
-            if self.can_fulfill(task["medications"]):
+            if await self.can_fulfill(task["medications"]):
                 await self.deliver_medication(task, room)
             else:
                 print(f"[{self.agent.name}] Foi escolhido para a tarefa {task['ID']} mas não consegue cumprir.")
@@ -369,3 +374,21 @@ class MedicationRobotAgent(Agent):
             })
             #print(f"[{self.agent.name}] Responding with status: {self.agent.robot_status.value}")
             await self.send(reply)
+
+        async def go_to_charging_station(self):
+            self.agent.robot_status = RobotStatus.CHARGING
+            charging_coords = CHARGING_STATION_LOCATION
+            topic = f"123/meia/{self.agent.robot_name.lower()}/goal"
+            self.agent.mqtt_goal_succeeded.clear()
+            self.agent.mqtt_client.publish(topic, json.dumps(charging_coords))
+            print(f"[{self.agent.robot_name}] Indo para estação de carregamento em {charging_coords}...")
+
+            print(f"[{self.agent.robot_name}] Esperando goal_succeeded para carregamento...")
+            await asyncio.get_event_loop().run_in_executor(None, self.agent.mqtt_goal_succeeded.wait)
+
+            if self.agent.mqtt_goal_succeeded.is_set():
+                print(f"[{self.agent.robot_name}] Chegou à estação de carregamento!")
+                self.agent.robot_status = RobotStatus.AVAILABLE
+                self.agent.battery_level = 100
+            else:
+                print(f"[{self.agent.robot_name}] Não chegou à estação de carregamento (timeout?)")

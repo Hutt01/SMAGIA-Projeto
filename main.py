@@ -2,18 +2,18 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-# pending_tasks = [
-#     {"medications": {"Type1": 5, "Type2": 3}, "room": "Room B-202", "ID": "task_002"},
-#     {"medications": {"Type1": 1, "Type2": 1, "Type3": 1, "Type4": 1}, "room": "Room A-101", "ID": "task_001"},
-#     {"medications": {"Type3": 1, "Type4": 1}, "room": "Room C-303", "ID": "task_003"},
-#     {"medications": {"Type3": 30, "Type4": 5}, "room": "Room C-303", "ID": "task_004"},
-#     {"medications": {"Type3": 1, "Type4": 1}, "room": "Room C-303", "ID": "task_005"},
-
-# ]
-
 pending_tasks = [
-    {"medications": {"Type1": 5, "Type2": 3}, "room": "Room C-303", "ID": "task_001"}
+    {"medications": {"Type1": 5, "Type2": 3}, "room": "Room B-202", "ID": "task_002"},
+    {"medications": {"Type1": 1, "Type2": 1, "Type3": 1, "Type4": 1}, "room": "Room A-101", "ID": "task_001"},
+    {"medications": {"Type3": 1, "Type4": 1}, "room": "Room C-303", "ID": "task_003"},
+    # {"medications": {"Type3": 30, "Type4": 5}, "room": "Room C-303", "ID": "task_004"},
+    # {"medications": {"Type3": 1, "Type4": 1}, "room": "Room C-303", "ID": "task_005"},
+
 ]
+
+# pending_tasks = [
+#     {"medications": {"Type1": 5, "Type2": 3}, "room": "Room C-303", "ID": "task_001"}
+# ]
 
 # pending_tasks = [
 #     {

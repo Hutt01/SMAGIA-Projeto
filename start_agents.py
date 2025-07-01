@@ -1,6 +1,7 @@
 import asyncio
 from agents.TaskManagementAgent import TaskManagerAgent
 from agents.MedicationRobotAgent import MedicationRobotAgent
+from agents.BatteryStation import BatteryStationAgent
 
 
 
@@ -17,10 +18,10 @@ if __name__ == "__main__":
             return [jid for jid in all_ids if jid != my_id]
         
         task_manager = TaskManagerAgent("taskmanager@localhost", "managerpassword", all_ids)
-
-        robot1 = MedicationRobotAgent("robot1@localhost", "robotpassword", get_peers("robot1@localhost"),"robot1")
-        robot2 = MedicationRobotAgent("robot2@localhost", "robotpassword", get_peers("robot2@localhost"),"robot2")
-        robot3 = MedicationRobotAgent("robot3@localhost", "robotpassword", get_peers("robot3@localhost"),"robot3")
+    
+        robot1 = MedicationRobotAgent("robot1@localhost", "robotpassword", get_peers("robot1@localhost"),"robot1",100)
+        robot2 = MedicationRobotAgent("robot2@localhost", "robotpassword", get_peers("robot2@localhost"),"robot2",19)
+        robot3 = MedicationRobotAgent("robot3@localhost", "robotpassword", get_peers("robot3@localhost"),"robot3",100)
         # robot4 = MedicationRobotAgent("robot4@localhost", "robotpassword", get_peers("robot4@localhost"))
 
         await asyncio.gather(
