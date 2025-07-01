@@ -84,7 +84,7 @@ class MedicationRobotAgent(Agent):
 
         elif (isinstance(data, dict) and data.get("status") == "goal_aborted") or \
             (isinstance(data, str) and data == "goal_aborted"):
-            self.mqtt_goal_succeeded.set()  # se usares o mesmo evento para aborted
+            self.mqtt_goal_succeeded.set() 
             self.robot_status = RobotStatus.AVAILABLE
             print(f"[{self.robot_name}] Estado atualizado para AVAILABLE após goal_aborted.")
 
@@ -135,14 +135,14 @@ class MedicationRobotAgent(Agent):
 
                             if peer_candidates:
                                 closest = min(peer_candidates, key=lambda p: p["distance_to_target"])
-                                # Só delega se o peer for realmente mais perto que tu!
+                                
                                 if closest["distance_to_target"] < self_distance:
                                     delegate_msg = Message(to=closest["jid"])
                                     delegate_msg.set_metadata("performative", "help_confirm")
                                     delegate_msg.body = json.dumps(task)
                                     await self.send(delegate_msg)
                                     print(f"[{self.agent.name}] Delegou a tarefa {task['ID']} para o robô mais próximo: {closest['jid']}")
-                                    # Informar o TaskManager para libertar este robô (não vai executar a tarefa)
+                                    
                                     notice = Message(to="taskmanager@localhost")
                                     notice.set_metadata("performative", "inform")
                                     notice.set_metadata("task_type", "delegation_notice")
@@ -198,15 +198,15 @@ class MedicationRobotAgent(Agent):
             try:
                 self.agent.robot_status = RobotStatus.DELIVERING
                 
-                # Aqui podes usar o serviço para obter a posição ATUAL do robô (se quiseres para log)
+                
                 current_location = get_location(self.agent.robot_name)
                 print(f"[{self.agent.name}] Current location: {current_location}")
                 
-                # Coordenadas do destino (a sala)
+                
                 room_coords = self.agent.room_locations.get(room)
                 print(f"[{self.agent.name}] New Status: Delivering. Heading to {room} at {room_coords}")
 
-                # Envia as coordenadas do destino para o tópico MQTT
+                
                 topic = f"123/meia/{self.agent.robot_name.lower()}/goal"
                 self.agent.mqtt_goal_succeeded.clear()
                 self.agent.mqtt_client.publish(topic, json.dumps(room_coords))
@@ -223,7 +223,7 @@ class MedicationRobotAgent(Agent):
                 for med_type, amount in task["medications"].items():
                     self.agent.stock[med_type] -= amount
 
-                # Notificar o TaskManager
+                
                 msg = Message(to="taskmanager@localhost")
                 msg.set_metadata("performative", "inform")
                 msg.set_metadata("task_type", "delivery_complete")
@@ -313,7 +313,7 @@ class MedicationRobotAgent(Agent):
                         data = json.loads(reply.body)
                         data["jid"] = str(reply.sender)
 
-                        location = get_location(data["jid"].split("@")[0])  # ex: "robot2"
+                        location = get_location(data["jid"].split("@")[0]) 
                         if location:
                             dist = distance_between_points(location[0], location[1],
                                                           target_coords["x"], target_coords["y"])
